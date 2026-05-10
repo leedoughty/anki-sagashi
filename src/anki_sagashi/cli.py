@@ -41,10 +41,22 @@ def scan(
     ] = False,
 ) -> None:
     """Scan Japanese text and find vocabulary gaps against your Anki deck."""
+    from anki_sagashi.anki import CardStatus, check_vocabulary
+
     raw_text = detect_and_read_input(source=source, text=text)
     result = tokenize(raw_text)
     filtered = filter_tokens(result, min_jlpt=min_jlpt, skip_top=skip_top)
 
+    lemmas: dict[str, tuple[str, str, int]] = {}
     for lemma, count in filtered.frequency.most_common():
         token = next(t for t in filtered.tokens if t.lemma == lemma)
-        typer.echo(f"{lemma}\t{token.reading}\t{token.pos}\tx{count}")
+        lemmas[lemma] = (token.reading, token.pos, count)
+
+    results = check_vocabulary(lemmas)
+
+    for r in results:
+        if r.status == CardStatus.KNOWN:
+            continue
+        if r.status == CardStatus.THIN and not include_thin:
+            continue
+        typer.echo(f"{r.status.value}\t{r.lemma}\t{r.reading}\tx{r.frequency}")
