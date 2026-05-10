@@ -1,10 +1,10 @@
-import sys
-from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
 
+from anki_sagashi.filters import filter_tokens
 from anki_sagashi.input import detect_and_read_input
+from anki_sagashi.tokenizer import tokenize
 
 app = typer.Typer(help="Find vocabulary gaps in Japanese text against your Anki deck.")
 
@@ -41,5 +41,10 @@ def scan(
     ] = False,
 ) -> None:
     """Scan Japanese text and find vocabulary gaps against your Anki deck."""
-    result = detect_and_read_input(source=source, text=text)
-    typer.echo(result)
+    raw_text = detect_and_read_input(source=source, text=text)
+    result = tokenize(raw_text)
+    filtered = filter_tokens(result, min_jlpt=min_jlpt, skip_top=skip_top)
+
+    for lemma, count in filtered.frequency.most_common():
+        token = next(t for t in filtered.tokens if t.lemma == lemma)
+        typer.echo(f"{lemma}\t{token.reading}\t{token.pos}\tx{count}")
