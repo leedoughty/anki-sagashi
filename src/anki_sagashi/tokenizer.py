@@ -52,3 +52,25 @@ def tokenize(text: str) -> TokenizeResult:
         ))
 
     return TokenizeResult(tokens=tokens)
+
+
+import re
+
+_SENTENCE_SPLIT = re.compile(r"[。！？\n]+")
+
+
+def extract_sentences(text: str) -> dict[str, str]:
+    """Map each lemma to the first sentence it appears in."""
+    tagger = _get_tagger()
+    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(text) if s.strip()]
+    lemma_to_sentence: dict[str, str] = {}
+
+    for sentence in sentences:
+        for word in tagger(sentence):
+            if word.feature.pos1 not in KEEP_POS:
+                continue
+            lemma = word.feature.lemma or word.surface
+            if lemma not in lemma_to_sentence:
+                lemma_to_sentence[lemma] = sentence
+
+    return lemma_to_sentence

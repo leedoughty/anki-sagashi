@@ -41,7 +41,9 @@ def scan(
     ] = False,
 ) -> None:
     """Scan Japanese text and find vocabulary gaps against your Anki deck."""
-    from anki_sagashi.anki import CardStatus, check_vocabulary
+    from anki_sagashi.anki import check_vocabulary
+    from anki_sagashi.report import render_export, render_json, render_table
+    from anki_sagashi.tokenizer import extract_sentences
 
     raw_text = detect_and_read_input(source=source, text=text)
     result = tokenize(raw_text)
@@ -54,9 +56,10 @@ def scan(
 
     results = check_vocabulary(lemmas)
 
-    for r in results:
-        if r.status == CardStatus.KNOWN:
-            continue
-        if r.status == CardStatus.THIN and not include_thin:
-            continue
-        typer.echo(f"{r.status.value}\t{r.lemma}\t{r.reading}\tx{r.frequency}")
+    if export:
+        sentences = extract_sentences(raw_text)
+        render_export(results, sentences, include_thin)
+    elif output == "json":
+        render_json(results, include_thin)
+    else:
+        render_table(results, include_thin)
