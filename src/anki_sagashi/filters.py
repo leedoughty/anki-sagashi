@@ -1,13 +1,29 @@
 import json
 from importlib.resources import files
 from collections import Counter
+from pathlib import Path
 
 from anki_sagashi.tokenizer import Token, TokenizeResult
+
+CONFIG_DIR = Path.home() / ".config" / "anki-sagashi"
+CONFIG_FILE = CONFIG_DIR / "config.toml"
 
 
 def _load_json(filename: str) -> list | dict:
     data_dir = files("anki_sagashi").joinpath("data", filename)
     return json.loads(data_dir.read_text(encoding="utf-8"))
+
+
+def _load_user_stopwords() -> set[str]:
+    if not CONFIG_FILE.exists():
+        return set()
+    try:
+        import tomllib
+        with open(CONFIG_FILE, "rb") as f:
+            config = tomllib.load(f)
+        return set(config.get("stopwords", {}).get("extra", []))
+    except Exception:
+        return set()
 
 
 _stopwords: set[str] | None = None
@@ -17,7 +33,7 @@ _jlpt: dict[str, int] | None = None
 def get_stopwords() -> set[str]:
     global _stopwords
     if _stopwords is None:
-        _stopwords = set(_load_json("stopwords.json"))
+        _stopwords = set(_load_json("stopwords.json")) | _load_user_stopwords()
     return _stopwords
 
 

@@ -46,8 +46,14 @@ def scan(
     from anki_sagashi.tokenizer import extract_sentences
 
     raw_text = detect_and_read_input(source=source, text=text)
+    if not raw_text.strip():
+        raise SystemExit("Error: input text is empty")
+
     result = tokenize(raw_text)
     filtered = filter_tokens(result, min_jlpt=min_jlpt, skip_top=skip_top)
+
+    if not filtered.tokens:
+        raise SystemExit("No content words found after filtering.")
 
     lemmas: dict[str, tuple[str, str, int]] = {}
     for lemma, count in filtered.frequency.most_common():

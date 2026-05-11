@@ -26,11 +26,22 @@ def detect_and_read_input(source: str | None, text: str | None) -> str:
 
 
 def fetch_url(url: str) -> str:
-    response = httpx.get(url, follow_redirects=True, timeout=30)
-    response.raise_for_status()
+    try:
+        response = httpx.get(url, follow_redirects=True, timeout=30)
+        response.raise_for_status()
+    except httpx.ConnectError:
+        raise SystemExit(f"Error: could not connect to '{url}'")
+    except httpx.TimeoutException:
+        raise SystemExit(f"Error: request timed out for '{url}'")
+    except httpx.HTTPStatusError as e:
+        raise SystemExit(f"Error: HTTP {e.response.status_code} for '{url}'")
+
     soup = BeautifulSoup(response.text, "html.parser")
 
     for tag in soup(["script", "style", "nav", "header", "footer"]):
         tag.decompose()
 
-    return soup.get_text(separator="\n", strip=True)
+    text = soup.get_text(separator="\n", strip=True)
+    if not text:
+        raise SystemExit(f"Error: no text content extracted from '{url}'")
+    return text
